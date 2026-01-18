@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Smart Parking System</title>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+<script src="https://unpkg.com/html5-qrcode"></script>
+
+<style>
+*{font-family:Segoe UI,Arial;box-sizing:border-box}
+body{margin:0;background:#f3f4f6}
+header{background:#0f172a;color:white;padding:15px;display:flex;justify-content:space-between;align-items:center}
+header button{background:#2563eb;color:white;border:none;padding:8px 14px;border-radius:5px;cursor:pointer}
+section{display:none;padding:20px}
+section.active{display:block}
+.card{background:white;padding:20px;border-radius:10px;box-shadow:0 4px 10px rgba(0,0,0,.1)}
+.slot{width:42px;height:42px;margin:3px;display:inline-flex;align-items:center;justify-content:center;border-radius:6px;color:white;font-weight:bold}
+.free{background:#16a34a}
+.busy{background:#dc2626}
+input,select,button{padding:8px;margin:5px;width:260px}
+table{width:100%;border-collapse:collapse;margin-top:10px}
+th,td{border:1px solid #ddd;padding:6px;text-align:center}
+#reader{width:300px;margin:auto}
+.infoBox{background:#eef2ff;padding:12px;border-radius:8px;margin-top:10px}
+</style>
+</head>
+
+<body>
+
+<header>
+<h3>🚗 Smart Parking System</h3>
+<div>
+<button onclick="show('dashboard')">Dashboard</button>
+<button onclick="show('booking')">Booking</button>
+<button onclick="show('scanner')">QR Scan</button>
+</div>
+</header>
+
+<!-- DASHBOARD -->
+<section id="dashboard" class="active">
+<div class="card">
+<h3>Parking Slots (25)</h3>
+<div id="slots"></div>
+
+<h3>Live Parking Logs</h3>
+<table>
+<tr>
+<th>Name</th><th>Vehicle</th><th>Slot</th>
+<th>Entry</th><th>Exit</th>
+<th>Payment</th><th>₹</th><th>Status</th>
+</tr>
+<tbody id="logs"></tbody>
+</table>
+</div>
+</section>
+
+<!-- BOOKING -->
+<section id="booking">
+<div class="card">
+<h3>Book Parking</h3>
+
+<input id="name" placeholder="Owner Name">
+<input id="mobile" placeholder="Mobile Number">
+<input id="vehicle" placeholder="Vehicle Number">
+
+<select id="slotSelect"></select>
+
+<select id="payment">
+<option value="">Select Payment</option>
+<option>UPI</option>
+<option>Cash</option>
+<option>Net Banking</option>
+</select>
+
+<button onclick="book()">Generate QR</button>
+
+<div id="qrBox"></div>
+</div>
+</section>
+
+<!-- SCANNER -->
+<section id="scanner">
+<div class="card">
+<h3>QR Scan (Entry / Exit)</h3>
+<div id="reader"></div>
+<div id="scanInfo"></div>
+</div>
+</section>
+
+<script>
+let slots = Array(25).fill(0);
+let logs = [];
+let qrScanner = null;
+
+/* NAV */
+function show(id){
+document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
+document.getElementById(id).classList.add("active");
+renderSlots();renderLogs();
+if(id==="scanner") startScanner();
+}
+
+/* RENDER */
+function renderSlots(){
+slotsDiv.innerHTML = slots.map((s,i)=>
+`<div class="slot ${s?'busy':'free'}">${i+1}</div>`).join("");
+
+slotSelect.innerHTML = slots.map((s,i)=>!s?
+`<option value="${i}">Slot ${i+1}</option>`:"").join("") || "<option>No Slot</option>";
+}
+
+function renderLogs(){
+logsBody.innerHTML = logs.map(l=>`
+<tr>
+<td>${l.name}</td>
+<td>${l.vehicle}</td>
+<td>${l.slot}</td>
+<td>${l.entryTime?.toLocaleString()||"-"}</td>
+<td>${l.exitTime?.toLocaleString()||"-"}</td>
+<td>${l.payment}</td>
+<td>${l.amount??"-"}</td>
+<td>${l.status}</td>
+</tr>`).join("");
+}
+
+/* BOOK */
+function book(){
+if(!name.value||!mobile.value||!vehicle.value||!payment.value){
+alert("All fields required");return;
+}
+
+let s = slotSelect.value;
+slots[s]=1;
+
+let entry=new Date();
+let qrData=vehicle.value+"|"+entry.getTime();
+
+logs.push({
+name:name.value,
+mobile:mobile.value,
+vehicle:vehicle.value,
+slot:Number(s)+1,
+entryTime:entry,
+exitTime:null,
+payment:payment.value,
+amount:null,
+status:"IN",
+qr:qrData
+});
+
+qrBox.innerHTML="";
+new QRCode(qrBox,{text:qrData,width:150,height:150});
+
+/* DOWNLOAD BUTTON */
+setTimeout(()=>{
+let img=qrBox.querySelector("img");
+let btn=document.createElement("button");
+btn.innerText="⬇ Download QR";
+btn.onclick=()=>downloadQR(img.src);
+qrBox.appendChild(btn);
+},300);
+
+renderSlots();renderLogs();
+alert("✅ QR Generated");
+}
+
+/* DOWNLOAD */
+function downloadQR(data){
+let a=document.createElement("a");
+a.href=data;
+a.download="parking_qr.png";
+a.click();
+}
+
+/* SCANNER */
+function startScanner(){
+reader.innerHTML="";scanInfo.innerHTML="";
+if(qrScanner) qrScanner.stop().catch(()=>{});
+qrScanner=new Html5Qrcode("reader");
+
+qrScanner.start({facingMode:"environment"},{fps:10,qrbox:250},
+(text)=>{
+let log=logs.find(l=>l.qr===text);
+if(!log){scanInfo.innerHTML="❌ Invalid QR";return;}
+
+let now=new Date();
+let mins=Math.ceil((now-log.entryTime)/60000);
+let amount=mins>1?(mins-1)*10:0;
+
+if(log.status==="IN"){
+log.status="EXIT_PENDING";
+scanInfo.innerHTML=info("ENTRY CONFIRMED",log,now,mins,amount);
+renderLogs();return;
+}
+
+if(log.status==="EXIT_PENDING"){
+log.status="OUT";
+log.exitTime=now;
+log.amount=amount;
+slots[log.slot-1]=0;
+scanInfo.innerHTML=info("EXIT SUCCESSFUL",log,now,mins,amount);
+renderSlots();renderLogs();return;
+}
+
+scanInfo.innerHTML="❌ Already Exited";
+});
+}
+
+function info(title,l,now,mins,amt){
+return `<div class="infoBox">
+<b>${title}</b><br>
+Name: ${l.name}<br>
+Vehicle: ${l.vehicle}<br>
+Slot: ${l.slot}<br>
+Time: ${mins} min<br>
+Amount: ₹${amt}
+</div>`;
+}
+
+/* ELEMENTS */
+const name=document.getElementById("name");
+const mobile=document.getElementById("mobile");
+const vehicle=document.getElementById("vehicle");
+const slotSelect=document.getElementById("slotSelect");
+const payment=document.getElementById("payment");
+const qrBox=document.getElementById("qrBox");
+const slotsDiv=document.getElementById("slots");
+const logsBody=document.getElementById("logs");
+const scanInfo=document.getElementById("scanInfo");
+const reader=document.getElementById("reader");
+
+renderSlots();
+</script>
+
+</body>
+</html>
