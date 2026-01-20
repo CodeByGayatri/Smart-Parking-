@@ -1,472 +1,540 @@
 <!DOCTYPE html>
 <html>
-
 <head>
-    <meta charset="UTF-8">
-    <title>Smart Parking System</title>
+  <meta charset="UTF-8">
+  <title>Smart Vehicle System</title>
 
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcodejs/qrcode.min.js"></script>
+  <script src="https://unpkg.com/html5-qrcode"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
-    <style>
-        * {
-            font-family: Segoe UI, Arial;
-            box-sizing: border-box
-        }
+  <style>
+    * { font-family: Segoe UI, system-ui, sans-serif; box-sizing: border-box; }
+    body { margin: 0; background: #e5e7eb; }
+    body.dark { background: #020617; }
 
-        body {
-            margin: 0;
-            background: #f3f4f6
-        }
+    .app { display: flex; height: 100vh; }
 
-        header {
-            background: #0f172a;
-            color: white;
-            padding: 15px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center
-        }
+    .sidebar {
+      width: 220px;
+      background: linear-gradient(180deg, #020617, #020617dd);
+      color: white;
+      padding: 10px;
+      display: flex;
+      flex-direction: column;
+    }
 
-        header button {
-            background: #2563eb;
-            color: white;
-            border: none;
-            padding: 8px 14px;
-            border-radius: 5px;
-            margin-left: 5px;
-            cursor: pointer
-        }
+    .sidebar-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 12px;
+    }
 
-        section {
-            display: none;
-            padding: 20px
-        }
+    .brand { font-size: 16px; font-weight: 600; }
+    .actions { display: flex; gap: 8px; }
 
-        section.active {
-            display: block
-        }
+    .icon-btn {
+      background: #2563eb;
+      border: none;
+      color: white;
+      border-radius: 0;
+      padding: 8px;
+      font-size: 18px;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
 
-        .card {
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, .1)
-        }
+    .dark-btn { background: #0f172a; }
 
-        .slot {
-            width: 42px;
-            height: 42px;
-            margin: 3px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            border-radius: 6px;
-            color: white;
-            font-weight: bold
-        }
+    .menu-item {
+      padding: 10px 12px;
+      border-radius: 8px;
+      cursor: pointer;
+      margin-bottom: 6px;
+      font-size: 14px;
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
 
-        .free {
-            background: #16a34a
-        }
+    .menu-item:hover,
+    .menu-item.active { background: rgba(255,255,255,0.15); }
+    .menu-item.danger { background: rgba(239,68,68,0.25); }
 
-        .busy {
-            background: #dc2626
-        }
+    .main {
+      flex: 1;
+      background: linear-gradient(120deg, #f1f5ff, #fefce8);
+      padding: 20px;
+      overflow-y: auto;
+    }
 
-        input,
-        select,
-        button {
-            padding: 8px;
-            margin: 5px;
-            width: 260px
-        }
+    body.dark .main { background: #020617; color: white; }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px
-        }
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      box-shadow: 0 6px 15px rgba(0,0,0,0.15);
+      max-width: 1150px;
+    }
 
-        th,
-        td {
-            border: 1px solid #ddd;
-            padding: 6px;
-            text-align: center
-        }
+    body.dark .card { background: #0f172a; color: white; }
 
-        #reader {
-            width: 300px;
-            margin: auto
-        }
+    input, select, button {
+      padding: 10px 14px;
+      margin: 6px 0;
+      width: 280px;
+      border-radius: 8px;
+      border: 1px solid #cbd5e1;
+      font-size: 14px;
+    }
 
-        .infoBox {
-            background: #eef2ff;
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 10px
-        }
+    button {
+      background: linear-gradient(135deg, #22c55e, #16a34a);
+      color: white;
+      border: none;
+      cursor: pointer;
+    }
 
-        .summaryBox {
-            background: #dcfce7;
-            padding: 12px;
-            border-radius: 8px;
-            margin-top: 10px
-        }
+    #slots {
+      margin: 15px 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(50px, 1fr));
+      gap: 8px;
+      max-width: 350px;
+    }
 
-        .deleteBtn {
-            background: #dc2626;
-            color: white;
-            border: none;
-            padding: 4px 8px;
-            border-radius: 4px;
-            cursor: pointer
-        }
-    </style>
+    .slot {
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 10px;
+      font-weight: bold;
+      color: white;
+    }
+
+    .free { background: #22c55e; }
+    .busy { background: #ef4444; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 15px;
+    }
+
+    th { background: #1e293b; color: white; padding: 10px; }
+    td { background: #f8fafc; padding: 8px; text-align: center; }
+    tr:nth-child(even) td { background: #eef2ff; }
+    body.dark td { background: #020617; color: white; }
+
+    .infoBox {
+      background: #e0f2fe;
+      padding: 14px;
+      border-radius: 12px;
+      margin-top: 10px;
+    }
+
+    .summaryBox {
+      background: #dcfce7;
+      padding: 14px;
+      border-radius: 12px;
+      margin-top: 10px;
+      font-weight: bold;
+    }
+
+    .deleteBtn {
+      background: #ef4444;
+      color: white;
+      border: none;
+      padding: 5px 10px;
+      border-radius: 6px;
+      cursor: pointer;
+    }
+
+    section { display: none; }
+    section.active { display: block; }
+
+    /* Scanner HARD stable UI */
+    #readerWrapper {
+      width: 260px;
+      height: 260px;
+      margin: 10px auto;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+
+    #reader {
+      width: 100%;
+      height: 100%;
+    }
+  </style>
 </head>
 
 <body>
+<div class="app">
+  <aside class="sidebar">
+    <div class="sidebar-top">
+      <div class="brand">🚘 Smart Vehicle</div>
+      <div class="actions">
+        <button class="icon-btn dark-btn" onclick="toggleTheme()">🌙</button>
+      </div>
+    </div>
 
-    <header>
-        <h3>🚗 Smart Parking System</h3>
-        <div>
-            <button onclick="show('dashboard')">Dashboard</button>
-            <button onclick="show('booking')">Booking</button>
-            <button onclick="show('scanner')">QR Scan</button>
-            <button onclick="show('history')">History</button>
-            <button onclick="clearAll()">Clear All</button>
-        </div>
-    </header>
+    <div class="menu-item active" onclick="show('dashboard',this)">🏠 Dashboard</div>
+    <div class="menu-item" onclick="show('booking',this)">🅿 Booking</div>
+    <div class="menu-item" onclick="show('scanner',this)">📷 QR Scan</div>
+    <div class="menu-item" onclick="show('history',this)">📜 History</div>
+    <div class="menu-item danger" onclick="clearAll()">🗑 Clear All</div>
+  </aside>
 
-    <!-- DASHBOARD -->
+  <main class="main">
+    <h2 id="pageTitle">Dashboard</h2>
+
     <section id="dashboard" class="active">
-        <div class="card">
-            <h3>Parking Slots (25)</h3>
-            <div id="slots"></div>
+      <div class="card">
+        <h3>Parking Slots</h3>
+        <div id="slots"></div>
 
-            <h3>Live Parking Logs</h3>
-            <table>
-                <tr>
-                    <th>Name</th>
-                    <th>Vehicle</th>
-                    <th>Slot</th>
-                    <th>Entry</th>
-                    <th>Exit</th>
-                    <th>Payment</th>
-                    <th>Amount</th>
-                    <th>Status</th>
-                </tr>
-                <tbody id="logs"></tbody>
-            </table>
-        </div>
+        <h3>Live Parking Logs</h3>
+        <table>
+          <tr>
+            <th>Name</th><th>Vehicle</th><th>Slot</th>
+            <th>Entry</th><th>Exit</th><th>Payment</th>
+            <th>Amount</th><th>Status</th>
+          </tr>
+          <tbody id="logs"></tbody>
+        </table>
+      </div>
     </section>
 
-    <!-- BOOKING -->
     <section id="booking">
-        <div class="card">
-            <h3>Book Parking</h3>
-
-            <input id="name" placeholder="Owner Name">
-            <input id="mobile" placeholder="Mobile Number">
-            <input id="vehicle" placeholder="Vehicle Number">
-
-            <select id="slotSelect"></select>
-
-            <select id="payment">
-                <option value="">Select Payment</option>
-                <option>UPI</option>
-                <option>Net Banking</option>
-                <option>Cash</option>
-            </select>
-
-            <button onclick="book()">Generate QR</button>
-
-            <div id="qrBox"></div>
-            <button onclick="downloadPDF()">📄 Download PDF Ticket</button>
-
-        </div>
+      <div class="card">
+        <h3>Book Parking</h3>
+        <input id="name" placeholder="Owner Name">
+        <input id="mobile" placeholder="Mobile Number">
+        <input id="vehicle" placeholder="Vehicle Number">
+        <select id="slotSelect"></select>
+        <select id="payment">
+          <option value="">Select Payment</option>
+          <option>UPI</option>
+          <option>Net Banking</option>
+          <option>Cash</option>
+        </select>
+        <button onclick="book()">Generate QR</button>
+        <div id="qrBox"></div>
+        <button onclick="downloadPDF()">📄 Download Ticket</button>
+      </div>
     </section>
 
-    <!-- QR SCAN -->
     <section id="scanner">
-        <div class="card">
-            <h3>QR Scan (Entry / Exit)</h3>
-            <div id="reader"></div>
-            <div id="scanInfo"></div>
+      <div class="card">
+        <h3>QR Scan</h3>
+        <div id="readerWrapper">
+          <div id="reader"></div>
         </div>
+        <div id="scanInfo"></div>
+      </div>
     </section>
 
-    <!-- HISTORY -->
     <section id="history">
-        <div class="card">
-            <h3>Vehicle Booking History</h3>
-
-            <input id="searchVehicle" placeholder="Enter Vehicle Number">
-            <button onclick="searchHistory()">Search</button>
-            <button onclick="deleteVehicleHistory()">🗑 Delete Vehicle History</button>
-
-            <div id="historySummary"></div>
-
-            <table>
-                <tr>
-                    <th>#</th>
-                    <th>Name</th>
-                    <th>Mobile</th>
-                    <th>Entry</th>
-                    <th>Exit</th>
-                    <th>Payment</th>
-                    <th>Amount</th>
-                    <th>Delete</th>
-                </tr>
-                <tbody id="historyResults"></tbody>
-            </table>
-        </div>
+      <div class="card">
+        <h3>Vehicle History</h3>
+        <input id="searchVehicle" placeholder="Enter Vehicle Number">
+        <button onclick="searchHistory()">Search</button>
+        <button onclick="deleteVehicleHistory()">Delete History</button>
+        <div id="historySummary"></div>
+        <table>
+          <tr>
+            <th>#</th><th>Name</th><th>Mobile</th>
+            <th>Entry</th><th>Exit</th><th>Payment</th>
+            <th>Amount</th><th>Delete</th>
+          </tr>
+          <tbody id="historyResults"></tbody>
+        </table>
+      </div>
     </section>
+  </main>
+</div>
 
-    <script>
-        const { jsPDF } = window.jspdf;
+<script>
+const { jsPDF } = window.jspdf;
 
-        let slots = Array(25).fill(0);
-        let logs = [];
-        let qrScanner = null;
-        let lastBooking = null;
+let slots = Array(25).fill(0);
+let logs = [];
+let qrScanner = null;
+let lastBooking = null;
+let scanLock = false;
 
-        function saveData() {
-            localStorage.setItem("parking_slots", JSON.stringify(slots));
-            localStorage.setItem("parking_logs", JSON.stringify(logs));
-        }
-        function loadData() {
-            let s = localStorage.getItem("parking_slots");
-            let l = localStorage.getItem("parking_logs");
+const RATE_PER_HOUR = 20;
 
-            if (s) slots = JSON.parse(s);
-            if (l) {
-                logs = JSON.parse(l);
-                logs.forEach(log => {
-                    log.entryTime = new Date(log.entryTime);
-                    if (log.exitTime) log.exitTime = new Date(log.exitTime);
-                });
-            }
-        }
-        loadData();
+const name = document.getElementById("name");
+const mobile = document.getElementById("mobile");
+const vehicle = document.getElementById("vehicle");
+const slotSelect = document.getElementById("slotSelect");
+const payment = document.getElementById("payment");
+const qrBox = document.getElementById("qrBox");
+const scanInfo = document.getElementById("scanInfo");
+const slotsDiv = document.getElementById("slots");
+const logsBody = document.getElementById("logs");
 
-        function show(id) {
-            document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
-            document.getElementById(id).classList.add("active");
-            renderSlots(); renderLogs();
-            if (id === "scanner") startScanner();
-        }
+const searchVehicle = document.getElementById("searchVehicle");
+const historyResults = document.getElementById("historyResults");
+const historySummary = document.getElementById("historySummary");
 
-        function renderSlots() {
-            let html = "";
-            slots.forEach((s, i) => {
-                html += `<div class="slot ${s ? 'busy' : 'free'}">${i + 1}</div>`;
-            });
-            slotsDiv.innerHTML = html;
+function toggleTheme() { document.body.classList.toggle("dark"); }
 
-            let opt = "";
-            slots.forEach((s, i) => {
-                if (!s) opt += `<option value="${i}">Slot ${i + 1}</option>`;
-            });
-            slotSelect.innerHTML = opt;
-        }
+function show(id, el) {
+  document.querySelectorAll("section").forEach(s => s.classList.remove("active"));
+  document.getElementById(id).classList.add("active");
 
-        function renderLogs() {
-            let html = "";
-            logs.forEach(l => {
-                html += `<tr>
-<td>${l.name}</td>
-<td>${l.vehicle}</td>
-<td>${l.slot}</td>
-<td>${l.entryTime.toLocaleString()}</td>
-<td>${l.exitTime ? l.exitTime.toLocaleString() : "-"}</td>
-<td>${l.payment}</td>
-<td>${l.amount ?? "-"}</td>
-<td>${l.status}</td>
-</tr>`;
-            });
-            logsBody.innerHTML = html;
-        }
+  document.querySelectorAll(".menu-item").forEach(m => m.classList.remove("active"));
+  if (el) el.classList.add("active");
 
-        function book() {
-            if (!name.value || !mobile.value || !vehicle.value || !payment.value) {
-                alert("All fields required"); return;
-            }
+  let titles = { dashboard:"Dashboard", booking:"Booking", scanner:"QR Scan", history:"History" };
+  pageTitle.innerText = titles[id];
 
-            let s = slotSelect.value;
-            if (slots[s] === 1) { alert("Slot already booked"); return; }
+  if (id === "scanner") {
+    setTimeout(forceRestartScanner, 300);
+  } else {
+    stopScanner();
+  }
+}
 
-            slots[s] = 1;
-            let entry = new Date();
-            let qrData = vehicle.value + "|" + entry.getTime();
+function stopScanner() {
+  if (qrScanner) {
+    qrScanner.stop().catch(()=>{});
+    qrScanner = null;
+  }
+}
 
-            let newLog = {
-                name: name.value,
-                mobile: mobile.value,
-                vehicle: vehicle.value,
-                slot: Number(s) + 1,
-                entryTime: entry,
-                exitTime: null,
-                payment: payment.value,
-                amount: null,
-                status: "IN",
-                qr: qrData
-            };
+function forceRestartScanner() {
+  stopScanner();
 
-            logs.push(newLog);
-            lastBooking = newLog;
+  const wrap = document.getElementById("readerWrapper");
+  wrap.innerHTML = '<div id="reader"></div>';
 
-            qrBox.innerHTML = "";
-            new QRCode(qrBox, { text: qrData, width: 300, height: 300 });
+  scanInfo.innerHTML = "";
 
-            saveData();
-            renderSlots(); renderLogs();
-            alert("✅ Parking Booked & QR Generated");
-        }
+  qrScanner = new Html5Qrcode("reader");
+  qrScanner.start(
+    { facingMode: "environment" },
+    { fps: 10, qrbox: 180 },
+    onScanSuccess,
+    (err) => {}
+  ).catch(err => {
+    scanInfo.innerHTML = "❌ Camera error / permission denied";
+  });
+}
 
-        function downloadPDF() {
-            if (!lastBooking) { alert("No booking"); return; }
+function onScanSuccess(text) {
+  if (scanLock) return;
+  scanLock = true;
 
-            let canvas = document.querySelector("#qrBox canvas");
-            let imgData = canvas.toDataURL("image/png");
+  let log = logs.find(l => l.qr === text);
+  if (!log) {
+    scanInfo.innerHTML = "❌ Invalid QR";
+    setTimeout(()=>scanLock=false, 1500);
+    return;
+  }
 
-            let doc = new jsPDF();
-            doc.text("SMART PARKING TICKET", 20, 20);
-            doc.text(`Name: ${lastBooking.name}`, 20, 35);
-            doc.text(`Mobile: ${lastBooking.mobile}`, 20, 45);
-            doc.text(`Vehicle: ${lastBooking.vehicle}`, 20, 55);
-            doc.text(`Slot: ${lastBooking.slot}`, 20, 65);
-            doc.text(`Entry: ${lastBooking.entryTime.toLocaleString()}`, 20, 75);
-            doc.addImage(imgData, "PNG", 60, 90, 90, 90);
-            doc.save("parking_ticket.pdf");
-        }
+  let now = new Date();
+  let amount = calculateAmount(log.entryTime, now);
 
-        function startScanner() {
-            document.getElementById("reader").innerHTML = "";
-            scanInfo.innerHTML = "";
+  if (log.status === "IN") {
+    log.status = "EXIT_PENDING";
+    scanInfo.innerHTML = infoHTML("ENTRY CONFIRMED", log, amount);
+  }
+  else if (log.status === "EXIT_PENDING") {
+    log.status = "OUT";
+    log.exitTime = now;
+    log.amount = amount;
+    slots[log.slot - 1] = 0;
+    scanInfo.innerHTML = infoHTML("EXIT SUCCESSFUL", log, amount);
+  }
+  else {
+    scanInfo.innerHTML = "❌ Already exited";
+  }
 
-            if (qrScanner) { qrScanner.stop().catch(() => { }); }
+  saveData();
+  renderSlots();
+  renderLogs();
 
-            qrScanner = new Html5Qrcode("reader");
-            qrScanner.start(
-                { facingMode: "environment" },
-                { fps: 10, qrbox: 250 },
-                (text) => {
-                    let log = logs.find(l => l.qr === text);
-                    if (!log) { scanInfo.innerHTML = "❌ Invalid QR"; return; }
+  setTimeout(() => {
+    scanInfo.innerHTML += "<br><b>Ready for next scan...</b>";
+    scanLock = false;
+  }, 2000);
+}
 
-                    let now = new Date();
-                    let mins = Math.ceil((now - log.entryTime) / 60000);
-                    let amount = mins > 1 ? (mins - 1) * 10 : 0;
+function saveData() {
+  localStorage.setItem("parking_slots", JSON.stringify(slots));
+  localStorage.setItem("parking_logs", JSON.stringify(logs));
+}
 
-                    if (log.status === "IN") {
-                        log.status = "EXIT_PENDING";
-                        scanInfo.innerHTML = infoHTML("ENTRY CONFIRMED", log, now, mins, amount);
-                        saveData(); renderLogs(); return;
-                    }
+function loadData() {
+  let s = localStorage.getItem("parking_slots");
+  let l = localStorage.getItem("parking_logs");
+  if (s) slots = JSON.parse(s);
+  if (l) logs = JSON.parse(l);
+}
+loadData();
 
-                    if (log.status === "EXIT_PENDING") {
-                        log.status = "OUT";
-                        log.exitTime = now;
-                        log.amount = amount;
-                        slots[log.slot - 1] = 0;
+function renderSlots() {
+  slotsDiv.innerHTML = slots.map((s,i)=>
+    `<div class="slot ${s?'busy':'free'}">${i+1}</div>`).join("");
+  slotSelect.innerHTML = slots.map((s,i)=>!s?
+    `<option value="${i}">Slot ${i+1}</option>`:"").join("");
+}
 
-                        scanInfo.innerHTML = infoHTML("EXIT SUCCESSFUL", log, now, mins, amount);
-                        saveData(); renderSlots(); renderLogs(); return;
-                    }
+function renderLogs() {
+  logsBody.innerHTML = logs.map(l=>`<tr>
+    <td>${l.name}</td><td>${l.vehicle}</td><td>${l.slot}</td>
+    <td>${new Date(l.entryTime).toLocaleString()}</td>
+    <td>${l.exitTime?new Date(l.exitTime).toLocaleString():"-"}</td>
+    <td>${l.payment}</td><td>${l.amount??"-"}</td>
+    <td>${l.status}</td>
+  </tr>`).join("");
+}
 
-                    scanInfo.innerHTML = "❌ Already exited";
-                },
-                () => { }
-            );
-        }
+function book() {
+  if (!name.value || !mobile.value || !vehicle.value || !payment.value) {
+    alert("All fields required"); return;
+  }
 
-        function infoHTML(title, log, now, mins, amount) {
-            return `
-<div class="infoBox">
-<b>${title}</b><br>
-Vehicle: ${log.vehicle}<br>
-Slot: ${log.slot}<br>
-Time: ${mins} min<br>
-Amount: ₹${amount}
-</div>`;
-        }
+  let s = slotSelect.value;
+  slots[s] = 1;
 
-        function searchHistory() {
-            let v = document.getElementById("searchVehicle").value.trim().toLowerCase();
-            let body = document.getElementById("historyResults");
-            let summary = document.getElementById("historySummary");
+  let entry = new Date();
+  let qrData = vehicle.value + "|" + entry.getTime();
 
-            body.innerHTML = ""; summary.innerHTML = "";
-            let matches = logs.filter(l => l.vehicle.toLowerCase() === v);
+  let newLog = {
+    name:name.value, mobile:mobile.value, vehicle:vehicle.value,
+    slot:Number(s)+1, entryTime:entry, exitTime:null,
+    payment:payment.value, amount:null, status:"IN", qr:qrData
+  };
 
-            if (matches.length === 0) { summary.innerHTML = "No history"; return; }
+  logs.push(newLog);
+  lastBooking = newLog;
 
-            let total = 0;
-            matches.forEach((l, i) => {
-                total += l.amount ?? 0;
-                body.innerHTML += `<tr>
-<td>${i + 1}</td>
-<td>${l.name}</td>
-<td>${l.mobile}</td>
-<td>${l.entryTime.toLocaleString()}</td>
-<td>${l.exitTime ? l.exitTime.toLocaleString() : "-"}</td>
-<td>${l.payment}</td>
-<td>${l.amount ?? 0}</td>
-<td><button class="deleteBtn" onclick="deleteOne(${i})">X</button></td>
-</tr>`;
-            });
+  qrBox.innerHTML = "";
+  new QRCode(qrBox,{ text:qrData, width:180, height:180 });
 
-            summary.innerHTML = `<div class="summaryBox">
-Visits: ${matches.length} |
-Total: ₹${total}
-</div>`;
+  saveData(); renderSlots(); renderLogs();
 
-            window.currentMatches = matches;
-        }
+  name.value=""; mobile.value=""; vehicle.value=""; payment.value="";
+  alert("Booking Successful!");
+}
 
-        function deleteOne(index) {
-            if (!confirm("Delete this record?")) return;
+function calculateAmount(entryTime, exitTime) {
+  let hours = Math.ceil((exitTime - new Date(entryTime))/(1000*60*60));
+  return Math.max(1,hours)*RATE_PER_HOUR;
+}
 
-            let target = window.currentMatches[index];
-            logs = logs.filter(l => l !== target);
-            saveData();
-            searchHistory();
-            renderLogs();
-        }
+function infoHTML(title, log, amount) {
+  return `<div class="infoBox">
+    <b>${title}</b><br>
+    Vehicle: ${log.vehicle}<br>
+    Slot: ${log.slot}<br>
+    Amount: ₹${amount}
+  </div>`;
+}
 
-        function deleteVehicleHistory() {
-            let v = document.getElementById("searchVehicle").value.trim().toLowerCase();
-            if (v === "") { alert("Enter vehicle number"); return; }
-            if (!confirm("Delete ALL history of this vehicle?")) return;
+function searchHistory() {
+  let v = searchVehicle.value.trim().toLowerCase();
+  historyResults.innerHTML="";
+  historySummary.innerHTML="";
 
-            logs = logs.filter(l => l.vehicle.toLowerCase() !== v);
-            saveData();
-            searchHistory();
-            renderLogs();
-        }
+  if (!v) { historySummary.innerHTML="Enter vehicle number!"; return; }
 
-        function clearAll() {
-            if (confirm("Delete all data?")) {
-                localStorage.clear();
-                location.reload();
-            }
-        }
+  let matches = logs.map((l,i)=>({...l,_index:i}))
+                    .filter(l=>l.vehicle.toLowerCase()===v);
 
-        const name = document.getElementById("name");
-        const mobile = document.getElementById("mobile");
-        const vehicle = document.getElementById("vehicle");
-        const slotSelect = document.getElementById("slotSelect");
-        const payment = document.getElementById("payment");
-        const qrBox = document.getElementById("qrBox");
-        const scanInfo = document.getElementById("scanInfo");
-        const slotsDiv = document.getElementById("slots");
-        const logsBody = document.getElementById("logs");
+  if (!matches.length) { historySummary.innerHTML="No history found"; return; }
 
-        renderSlots(); renderLogs();
-    </script>
+  let total=0;
+  matches.forEach((l,i)=>{
+    total+=l.amount||0;
+    historyResults.innerHTML+=`<tr>
+      <td>${i+1}</td><td>${l.name}</td><td>${l.mobile}</td>
+      <td>${new Date(l.entryTime).toLocaleString()}</td>
+      <td>${l.exitTime?new Date(l.exitTime).toLocaleString():"-"}</td>
+      <td>${l.payment}</td><td>${l.amount||0}</td>
+      <td><button class="deleteBtn" onclick="deleteOne(${l._index})">X</button></td>
+    </tr>`;
+  });
 
+  historySummary.innerHTML=`<div class="summaryBox">
+    Visits: ${matches.length} | Total: ₹${total}
+  </div>`;
+}
+
+function deleteOne(i) {
+  if (!confirm("Delete this record?")) return;
+  logs.splice(i,1);
+  saveData(); searchHistory(); renderLogs();
+}
+
+function deleteVehicleHistory() {
+  let v = searchVehicle.value.trim().toLowerCase();
+  if (!v) { alert("Enter vehicle number"); return; }
+
+  logs = logs.filter(l=>l.vehicle.toLowerCase()!==v);
+  saveData(); searchHistory(); renderLogs();
+}
+
+function clearAll() {
+  if (!confirm("Delete all data?")) return;
+  slots = Array(25).fill(0);
+  logs = [];
+  lastBooking = null;
+
+  localStorage.removeItem("parking_slots");
+  localStorage.removeItem("parking_logs");
+
+  qrBox.innerHTML="";
+  scanInfo.innerHTML="";
+  historyResults.innerHTML="";
+  historySummary.innerHTML="";
+  slotSelect.innerHTML="";
+
+  renderSlots(); renderLogs();
+  alert("✅ All data cleared successfully!");
+}
+
+function downloadPDF() {
+  if (!lastBooking) { alert("No booking found!"); return; }
+
+  const doc = new jsPDF();
+  doc.setFontSize(16);
+  doc.text("SMART PARKING TICKET",20,20);
+
+  doc.setFontSize(12);
+  doc.text("Name: "+lastBooking.name,20,40);
+  doc.text("Mobile: "+lastBooking.mobile,20,50);
+  doc.text("Vehicle: "+lastBooking.vehicle,20,60);
+  doc.text("Slot: "+lastBooking.slot,20,70);
+  doc.text("Entry: "+new Date(lastBooking.entryTime).toLocaleString(),20,80);
+  doc.text("Payment: "+lastBooking.payment,20,90);
+
+  let qrCanvas = qrBox.querySelector("canvas");
+  if (qrCanvas) {
+    let qrImg = qrCanvas.toDataURL("image/png");
+    doc.text("Scan QR Code:",20,110);
+    doc.addImage(qrImg,"PNG",20,120,60,60);
+  }
+
+  doc.save("ticket_"+lastBooking.vehicle+".pdf");
+}
+
+renderSlots();
+renderLogs();
+</script>
 </body>
-
 </html>
